@@ -1,0 +1,76 @@
+services:
+  usersdb:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: usersdb
+    environment:
+      SA_PASSWORD: "KHt$3QJ*D7h126saT^in1&"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    networks:
+      - innoshop-network
+    volumes:
+      - usersdbdata:/var/opt/mssql
+
+  productsdb:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: productsdb
+    environment:
+      SA_PASSWORD: "YourStrong!Passw0rd"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1434:1433"
+    networks:
+      - innoshop-network
+    volumes:
+      - productsdbdata:/var/opt/mssql
+
+  usersapi:
+    build:
+      context: ./UserService
+      dockerfile: src/Users.Api/Dockerfile
+    depends_on:
+      - usersdb
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Docker"
+      ConnectionStrings__DefaultConnection: "Server=usersdb,1433;Database=InnoShopUsersDb;User Id=sa;Password=KHt$3QJ*D7h126saT^in1&;"
+    ports:
+      - "5001:8080"
+    networks:
+      - innoshop-network
+
+  productsapi:
+    build:
+      context: ./ProductService
+      dockerfile: src/Products.Api/Dockerfile
+    depends_on:
+      - productsdb
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=productsdb,1433;Database=InnoShopProductsDb;User Id=sa;Password=YourStrong!Passw0rd;"
+      ASPNETCORE_ENVIRONMENT: "Docker"
+    ports:
+      - "5002:8080"
+    networks:
+      - innoshop-network
+
+  apigateway:
+    build:
+      context: ./ApiGateway
+      dockerfile: Dockerfile
+    depends_on:
+      - usersapi
+      - productsapi
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Docker"
+    ports:
+      - "5000:8080"
+    networks:
+      - innoshop-network
+
+
+networks:
+  innoshop-network:
+
+volumes:
+  usersdbdata:
+  productsdbdata:

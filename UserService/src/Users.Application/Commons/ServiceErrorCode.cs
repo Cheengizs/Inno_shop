@@ -1,4 +1,4 @@
-﻿namespace Products.Application.Commons;
+﻿namespace Users.Application.Commons;
 
 public enum ServiceErrorCode
 {
@@ -6,5 +6,5 @@ public enum ServiceErrorCode
     NotFound,
     Validation,
     Conflict,
-    Forbidden,
+    Unauthorized,
 }

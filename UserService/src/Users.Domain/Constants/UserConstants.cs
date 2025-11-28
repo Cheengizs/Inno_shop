@@ -12,4 +12,7 @@ public class UserConstants
     public static readonly int UserLastNameMaxLength = 50;
     
     public static readonly int UserEmailMaxLength = 255;
+    
+    public static readonly int UserPasswordMinLength = 8;
+    public static readonly int UserPasswordMaxLength = 24;
 }

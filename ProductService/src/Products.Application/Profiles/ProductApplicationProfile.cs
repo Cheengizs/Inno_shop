@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Products.Application.Dto_s.Products;
+using Products.Application.DTOs.Products;
 using Products.Domain.Models;
 
 namespace Products.Application.Profiles;

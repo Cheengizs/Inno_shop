@@ -1,6 +1,6 @@
 ﻿using System.Data;
 using FluentValidation;
-using Products.Application.Dto_s.Products;
+using Products.Application.DTOs.Products;
 using Products.Domain.Constants;
 
 namespace Products.Application.Validators;

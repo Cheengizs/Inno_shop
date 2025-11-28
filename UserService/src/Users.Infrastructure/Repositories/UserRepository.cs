@@ -46,11 +46,13 @@ public class UserRepository : IUserRepository
         return result;
     }
 
-    public async Task AddAsync(UserModel user)
+    public async Task<UserModel> AddAsync(UserModel user)
     {
         var userToAdd = _mapper.Map<UserEntity>(user);
         await _context.Users.AddAsync(userToAdd);
         await _context.SaveChangesAsync();
+        UserModel result = _mapper.Map<UserModel>(userToAdd);
+        return result;
     }
 
     public async Task UpdateAsync(UserModel user)

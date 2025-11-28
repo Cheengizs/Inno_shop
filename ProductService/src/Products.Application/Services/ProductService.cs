@@ -2,7 +2,7 @@
 using FluentValidation;
 using Products.Application.Clients;
 using Products.Application.Commons;
-using Products.Application.Dto_s.Products;
+using Products.Application.DTOs.Products;
 using Products.Application.Filters;
 using Products.Application.RepositoryInterfaces;
 using Products.Application.Results;
@@ -101,6 +101,13 @@ public class ProductService : IProductService
                 ServiceErrorCode.NotFound);
         }
 
+        if (existingProduct.UserId != request.UserId)
+        {
+            var failResult =
+                ProductServiceResult<ProductResponse>.Failure(["forbidden user"], ServiceErrorCode.Forbidden);
+            return failResult;
+        }
+        
         var productToUpdate = _mapper.Map<ProductModel>(request);
         productToUpdate.Id = id; 
         

@@ -9,7 +9,7 @@ public interface IUserRepository
     Task<UserModel?> GetByEmailAsync(string email);      
     Task<IEnumerable<UserModel>> GetAllAsync();    
 
-    Task AddAsync(UserModel user); 
+    Task<UserModel> AddAsync(UserModel user); 
     
     Task UpdateAsync(UserModel user); 
     Task SetPasswordHashAsync(int userId, string passwordHash); 

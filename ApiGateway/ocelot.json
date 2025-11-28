@@ -4,7 +4,7 @@
       "DownstreamPathTemplate": "/api/products/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "productsapi", "Port": 8080 }
+        { "Host": "localhost", "Port": 5002 }
       ],
       "UpstreamPathTemplate": "/api/products/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
@@ -13,13 +13,13 @@
       "DownstreamPathTemplate": "/api/users/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "usersapi", "Port": 8080 }
+        { "Host": "localhost", "Port": 5001 }
       ],
       "UpstreamPathTemplate": "/api/users/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "http://apigateway:8080"
+    "BaseUrl": "http://localhost:5000"
   }
 }

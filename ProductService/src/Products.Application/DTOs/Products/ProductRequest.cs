@@ -1,4 +1,4 @@
-﻿namespace Products.Application.Dto_s.Products;
+﻿namespace Products.Application.DTOs.Products;
 
 public record ProductRequest(
     string Name,

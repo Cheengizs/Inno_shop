@@ -20,7 +20,8 @@ public static class AddApplicationServicesExtensions
     {
         services.AddDbContext<ProductsDbContext>(options =>
         {
-            options.UseSqlServer(configuration.GetConnectionString("DbConnection"));
+            options.UseSqlServer(configuration.GetConnectionString("DbConnection"), 
+                sql => sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(5), null));
         });
         
         services.AddControllers();
@@ -35,7 +36,7 @@ public static class AddApplicationServicesExtensions
         
         services.AddHttpClient<IUserServiceClient, UserServiceClient>(client =>
         {
-            client.BaseAddress = new Uri("http://apigateway:8080/"); 
+            client.BaseAddress = new Uri("http://localhost:5000/"); 
         });
 
         services.AddScoped<IProductRepository, ProductRepository>();

@@ -1,6 +1,6 @@
-﻿namespace Products.Application.Dto_s.Products;
+﻿namespace Products.Application.DTOs.Products;
 
-public class ProductResponse(
+public record ProductResponse(
     int Id,
     string Name,
     string Description,

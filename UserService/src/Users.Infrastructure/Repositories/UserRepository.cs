@@ -39,6 +39,20 @@ public class UserRepository : IUserRepository
         return result;
     }
 
+    public async Task<IEnumerable<UserModel>> GetAllAsync(int pageNumber, int pageSize)
+    {
+        pageNumber = Math.Max(1, pageNumber);
+        pageSize = Math.Clamp(pageSize, 1, 100); // Ограничиваем размер страницы (макс 100)
+
+        var usersFromDb = await _context
+            .Users
+            .OrderBy(u => u.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize).ToListAsync();
+        
+        return _mapper.Map<IEnumerable<UserModel>>(usersFromDb);
+    }
+
     public async Task<IEnumerable<UserModel>> GetAllAsync()
     {
         var usersFromDb = await _context.Users.ToListAsync();
@@ -91,5 +105,20 @@ public class UserRepository : IUserRepository
     
         _context.Users.Remove(user);
         await _context.SaveChangesAsync();
+    }
+    
+    public async Task UpdateStatusAsync(int id, bool isActive)
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user != null)
+        {
+            user.IsActive = isActive;
+            if (!isActive) 
+            {
+                user.RefreshToken = string.Empty; 
+            }
+        
+            await _context.SaveChangesAsync();
+        }
     }
 }

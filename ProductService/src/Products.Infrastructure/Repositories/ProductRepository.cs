@@ -22,88 +22,65 @@ public class ProductRepository : IProductRepository
     public async Task<ProductModel?> GetByIdAsync(int id)
     {
         var productFromDb = await _context.Products.FindAsync(id);
+
+        if (productFromDb == null) return null;
+
         var result = _mapper.Map<ProductModel>(productFromDb);
         return result;
     }
 
     public async Task<IEnumerable<ProductModel>> GetAllAsync(ProductFilter? filter = null)
     {
-        var query = _context.Products.AsQueryable();
-        if (filter != null)
-        {
-            if (filter.UserId.HasValue)
-                query = query.Where(p => p.UserId == filter.UserId.Value);
+        var query = _context.Products.AsNoTracking(); 
 
-            if (!string.IsNullOrWhiteSpace(filter.NameContains))
-                query = query.Where(p => p.Name.Contains(filter.NameContains));
-
-            if (filter.MinPrice.HasValue)
-                query = query.Where(p => p.Price >= filter.MinPrice.Value);
-
-            if (filter.MaxPrice.HasValue)
-                query = query.Where(p => p.Price <= filter.MaxPrice.Value);
-
-            if (filter.IsAvailable.HasValue)
-                query = query.Where(p => p.IsAvailable == filter.IsAvailable.Value);
-        }
+        query = ApplyFilters(query, filter); 
 
         var products = await query.ToListAsync();
-        var result = _mapper.Map<IEnumerable<ProductModel>>(products);
-        return result;
+        return _mapper.Map<IEnumerable<ProductModel>>(products);
     }
 
-    public async Task<IEnumerable<ProductModel>> GetPagedAsync(int pageNumber, int pageSize, ProductFilter? filter = null)
+    public async Task<IEnumerable<ProductModel>> GetPagedAsync(int pageNumber, int pageSize,
+        ProductFilter? filter = null)
     {
-        var query = _context.Products.AsQueryable();
+        var query = _context.Products.AsNoTracking(); // <--- Оптимизация
 
-        if (filter != null)
-        {
-            if (filter.UserId.HasValue)
-                query = query.Where(p => p.UserId == filter.UserId.Value);
+        query = ApplyFilters(query, filter); // <--- Используем общий метод
 
-            if (!string.IsNullOrWhiteSpace(filter.NameContains))
-                query = query.Where(p => p.Name.Contains(filter.NameContains));
-
-            if (filter.MinPrice.HasValue)
-                query = query.Where(p => p.Price >= filter.MinPrice.Value);
-
-            if (filter.MaxPrice.HasValue)
-                query = query.Where(p => p.Price <= filter.MaxPrice.Value);
-
-            if (filter.IsAvailable.HasValue)
-                query = query.Where(p => p.IsAvailable == filter.IsAvailable.Value);
-        }
-        
         pageNumber = Math.Max(1, pageNumber);
         pageSize = Math.Clamp(pageSize, 1, 100);
-        
-        query = query.Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .AsNoTracking();
-        
+
+        query = query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize);
+
         var products = await query.ToListAsync();
-        var result = _mapper.Map<IEnumerable<ProductModel>>(products);
-        return result;
+        return _mapper.Map<IEnumerable<ProductModel>>(products);
     }
 
     public async Task<ProductModel> AddAsync(ProductModel product)
     {
         var productToAdd = _mapper.Map<ProductEntity>(product);
+
         await _context.Products.AddAsync(productToAdd);
         await _context.SaveChangesAsync();
-        ProductModel result = _mapper.Map<ProductModel>(productToAdd);
-        return result;
-    }
 
+        // Возвращаем модель с уже сгенерированным ID
+        return _mapper.Map<ProductModel>(productToAdd);
+    }
 
     public async Task UpdateAsync(ProductModel product)
     {
         var productFromDb = await _context.Products.FindAsync(product.Id);
-        if (productFromDb == null) return;
-        if (productFromDb.UserId != product.UserId) return; 
+
+        if (productFromDb == null) return; 
+
+        if (productFromDb.UserId != product.UserId)
+        {
+            throw new Exception("User does not match.");
+        }
 
         _mapper.Map(product, productFromDb);
-        
+
         await _context.SaveChangesAsync();
     }
 
@@ -119,10 +96,32 @@ public class ProductRepository : IProductRepository
     public async Task<IEnumerable<ProductModel>> GetByOwnerIdAsync(int ownerId)
     {
         var products = await _context.Products
+            .AsNoTracking() 
             .Where(p => p.UserId == ownerId)
             .ToListAsync();
 
-        var result = _mapper.Map<IEnumerable<ProductModel>>(products);
-        return result;
+        return _mapper.Map<IEnumerable<ProductModel>>(products);
+    }
+
+    private IQueryable<ProductEntity> ApplyFilters(IQueryable<ProductEntity> query, ProductFilter? filter)
+    {
+        if (filter == null) return query;
+
+        if (filter.UserId.HasValue)
+            query = query.Where(p => p.UserId == filter.UserId.Value);
+
+        if (!string.IsNullOrWhiteSpace(filter.NameContains))
+            query = query.Where(p => p.Name.Contains(filter.NameContains));
+
+        if (filter.MinPrice.HasValue)
+            query = query.Where(p => p.Price >= filter.MinPrice.Value);
+
+        if (filter.MaxPrice.HasValue)
+            query = query.Where(p => p.Price <= filter.MaxPrice.Value);
+
+        if (filter.IsAvailable.HasValue)
+            query = query.Where(p => p.IsAvailable == filter.IsAvailable.Value);
+
+        return query;
     }
 }

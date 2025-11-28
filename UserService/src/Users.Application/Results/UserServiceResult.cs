@@ -18,9 +18,9 @@ public class UserServiceResult<T>
         ErrorCode = errorCode;
     }
 
-    public static UserServiceResult<T?> Success(T value) => new(true, value);
+    public static UserServiceResult<T> Success(T value) => new(true, value);
 
-    public static UserServiceResult<T?> Failure(List<string> errors, ServiceErrorCode errorCode)
+    public static UserServiceResult<T> Failure(List<string> errors, ServiceErrorCode errorCode)
         => new(false, default, errors, errorCode);
 }
 

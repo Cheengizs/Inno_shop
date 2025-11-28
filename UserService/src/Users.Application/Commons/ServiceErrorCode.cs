@@ -7,4 +7,6 @@ public enum ServiceErrorCode
     Validation,
     Conflict,
     Unauthorized,
+    Forbidden,
+    InternalServerError,
 }

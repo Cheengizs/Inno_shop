@@ -83,7 +83,7 @@ public class ProductController : ControllerBase
         if (!result.IsSuccess)
         {
             if (result.ErrorCode == ServiceErrorCode.Validation)
-                return Conflict();
+                return BadRequest();
 
             return BadRequest(result.Errors);
         }
@@ -130,7 +130,7 @@ public class ProductController : ControllerBase
         var userId = User.GetUserId();
         if (userId == null) return Unauthorized();
 
-        var result = await _productService.DeleteAsync(id);
+        var result = await _productService.DeleteAsync(id, userId.Value);
 
         if (!result.IsSuccess)
         {

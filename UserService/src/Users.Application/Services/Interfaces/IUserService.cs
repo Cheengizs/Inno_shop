@@ -1,12 +1,17 @@
-﻿using Users.Application.DTOs;
+﻿using System.Collections;
+using Users.Application.DTOs;
 using Users.Application.Results;
-using Users.Domain.Models;
 
 namespace Users.Application.Services.Interfaces;
 
 public interface IUserService
 {
+    Task<UserServiceResult<IEnumerable<UserResponse>>> GetAllUsersAsync(int pageNumber = 1, int pageSize = 10);
     Task<UserServiceResult<UserResponse>> RegisterAsync(RegisterRequest request);
     Task<UserServiceResult<LoginResponse>> LoginAsync(LoginRequest request);
-    Task<UserServiceResult> ValidateUserEmail(int userId);
+    Task<UserServiceResult<UserResponse>> GetByIdAsync(int id);
+    Task<UserServiceResult> SendConfirmationEmailAsync(int userId);
+    Task<UserServiceResult> ConfirmEmailAsync(string token); 
+    Task<UserServiceResult> ChangeActiveStatusAsync(int userId, bool isActive);
+    
 }

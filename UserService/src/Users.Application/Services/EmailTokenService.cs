@@ -10,6 +10,11 @@ namespace Users.Application.Services;
 public class EmailTokenService : IEmailTokenService
 {
     private readonly IConfiguration _configuration;
+    
+    private const string Issuer = "InnoShop";
+    private const string Audience = "InnoShop";
+    private const string ClaimPurpose = "Purpose";
+    private const string PurposeValue = "EmailConfirmation";
 
     public EmailTokenService(IConfiguration configuration)
     {
@@ -18,18 +23,21 @@ public class EmailTokenService : IEmailTokenService
 
     public string GenerateEmailConfirmationToken(int userId)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:EmailConfirmationKey"]));
+        var keyString = _configuration["Jwt:EmailConfirmationKey"];
+        if (string.IsNullOrEmpty(keyString)) throw new ArgumentNullException("Jwt:EmailConfirmationKey is missing in config");
+        
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
         {
             new Claim("UserId", userId.ToString()),
-            new Claim("Purpose", "EmailConfirmation")
+            new Claim(ClaimPurpose, PurposeValue) 
         };
 
         var token = new JwtSecurityToken(
-            issuer: "InnoShop",
-            audience: "InnoShop",
+            issuer: Issuer,
+            audience: Audience,
             claims: claims,
             expires: DateTime.UtcNow.AddHours(24),
             signingCredentials: creds
@@ -38,36 +46,51 @@ public class EmailTokenService : IEmailTokenService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public bool ValidateEmailConfirmationToken(string token, out int userId)
+    public int? ValidateEmailConfirmationToken(string token)
     {
-        userId = 0;
+        var keyString = _configuration["Jwt:EmailConfirmationKey"];
+        if (string.IsNullOrEmpty(keyString)) return null;
+
         var handler = new JwtSecurityTokenHandler();
         try
         {
-            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:EmailConfirmationKey"]);
+            var key = Encoding.UTF8.GetBytes(keyString);
+            
             var principal = handler.ValidateToken(token, new TokenValidationParameters
             {
                 ValidateIssuer = true,
-                ValidIssuer = "InnoShop",
+                ValidIssuer = Issuer,
                 ValidateAudience = true,
-                ValidAudience = "InnoShop",
+                ValidAudience = Audience,
                 ValidateLifetime = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuerSigningKey = true
+                ValidateIssuerSigningKey = true,
+                ClockSkew = TimeSpan.Zero 
             }, out var validatedToken);
-            
+
             if (validatedToken is not JwtSecurityToken jwt ||
                 !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
             {
-                return false;
+                return null;
             }
 
-            userId = int.Parse(principal.FindFirst("UserId")!.Value);
-            return true;
+            var purposeClaim = principal.FindFirst(ClaimPurpose)?.Value;
+            if (purposeClaim != PurposeValue)
+            {
+                return null; 
+            }
+
+            var userIdClaim = principal.FindFirst("UserId");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return null;
+            }
+
+            return userId;
         }
         catch
         {
-            return false;
+            return null;
         }
     }
 }

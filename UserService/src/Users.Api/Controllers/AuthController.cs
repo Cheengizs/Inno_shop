@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Users.Application.Commons;
 using Users.Application.DTOs;
 using Users.Application.Services.Interfaces;
@@ -10,13 +12,10 @@ namespace Users.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IUserService _userService;
-    private readonly IEmailTokenService _emailTokenService;
 
-    public AuthController(IUserService userService,
-        IEmailTokenService emailTokenService)
+    public AuthController(IUserService userService)
     {
         _userService = userService;
-        _emailTokenService = emailTokenService;
     }
 
     [HttpPost("register")]
@@ -44,30 +43,59 @@ public class AuthController : ControllerBase
 
         if (!result.IsSuccess)
         {
-            if (!result.IsSuccess)
+            return result.ErrorCode switch
             {
-                return result.ErrorCode switch
-                {
-                    ServiceErrorCode.NotFound => NotFound(result.Errors),
-                    ServiceErrorCode.Unauthorized => Unauthorized(result.Errors),
-                    _ => StatusCode(500, result.Errors)
-                };
-            }
+                ServiceErrorCode.NotFound => Unauthorized(new { error = "Invalid credentials" }), 
+                ServiceErrorCode.Unauthorized => Unauthorized(result.Errors),
+                ServiceErrorCode.Forbidden => StatusCode(403, result.Errors), // Для бана
+                _ => StatusCode(500, result.Errors)
+            };
         }
         
         return Ok(result.Value);
+    }
+
+    [HttpPost("send-confirmation-email")]
+    [Authorize] 
+    public async Task<IActionResult> SendConfirmationEmailAsync()
+    {
+        var userIdClaim = User.FindFirst("UserId") ?? User.FindFirst(ClaimTypes.NameIdentifier);
+        
+        if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _userService.SendConfirmationEmailAsync(userId);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ServiceErrorCode.NotFound => NotFound(result.Errors),
+                ServiceErrorCode.Conflict => Conflict(result.Errors), 
+                _ => StatusCode(500, result.Errors)
+            };
+        }
+
+        return Ok(new { message = "Verification email sent." });
     }
     
     [HttpGet("confirm-email")]
     public async Task<IActionResult> ConfirmEmailAsync([FromQuery] string token)
     {
-        if (!_emailTokenService.ValidateEmailConfirmationToken(token, out var userId))
+        if (string.IsNullOrWhiteSpace(token))
         {
-            return BadRequest("Invalid or expired confirmation token.");
+            return BadRequest("Token is required.");
         }
 
-        await _userService.ValidateUserEmail(userId);
-        return Ok("Email confirmed successfully!");
+        var result = await _userService.ConfirmEmailAsync(token);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result.Errors);
+        }
+
+        return Ok(new { message = "Email confirmed successfully!" });
     }
-    
 }

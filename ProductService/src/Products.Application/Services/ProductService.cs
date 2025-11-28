@@ -27,18 +27,18 @@ public class ProductService : IProductService
         _userServiceClient = userServiceClient;
     }
     
-    public async Task<ProductServiceResult<ProductResponse?>> GetByIdAsync(int id)
+    public async Task<ProductServiceResult<ProductResponse>> GetByIdAsync(int id)
     {
         var productFromRepo = await _productRepository.GetByIdAsync(id);
 
         if (productFromRepo == null)
         {
-            ProductServiceResult<ProductResponse?> failResult = ProductServiceResult<ProductResponse>.Failure(["Product not found."], ServiceErrorCode.NotFound);
+            ProductServiceResult<ProductResponse> failResult = ProductServiceResult<ProductResponse>.Failure(["Product not found."], ServiceErrorCode.NotFound);
             return failResult;
         }
         
-        ProductResponse? productResult = _mapper.Map<ProductResponse>(productFromRepo);
-        ProductServiceResult<ProductResponse?> successResult =
+        ProductResponse productResult = _mapper.Map<ProductResponse>(productFromRepo);
+        ProductServiceResult<ProductResponse> successResult =
             ProductServiceResult<ProductResponse>.Success(productResult);
         
         return successResult;
@@ -66,23 +66,27 @@ public class ProductService : IProductService
         var validationResult = await _productRequestValidator.ValidateAsync(request);
         if (!validationResult.IsValid)
         {
-            var failResult = ProductServiceResult<ProductResponse>.Failure(
-                validationResult.Errors.Select(e => e.ErrorMessage).ToList(),
-                ServiceErrorCode.Validation);
-            
-            return failResult;
+            return ProductServiceResult<ProductResponse>.Failure(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList(), ServiceErrorCode.Validation);
+        }
+
+        bool isEmailConfirmed = await _userServiceClient.IsEmailConfirmedAsync(request.UserId);
+    
+        if (!isEmailConfirmed)
+        {
+            return ProductServiceResult<ProductResponse>.Failure(
+                ["Email is not confirmed. Please verify your email to create products."], 
+                ServiceErrorCode.Forbidden);
         }
 
         var productEntity = _mapper.Map<ProductModel>(request);
-        
         var responseFromRepo = await _productRepository.AddAsync(productEntity);
         ProductResponse productResult = _mapper.Map<ProductResponse>(responseFromRepo);
-        
-        ProductServiceResult<ProductResponse> result = ProductServiceResult<ProductResponse>.Success(productResult);
-        return result;
+    
+        return ProductServiceResult<ProductResponse>.Success(productResult);
     }
-
-    public async Task<ProductServiceResult<ProductResponse?>> UpdateAsync(int id, ProductRequest request)
+    
+    public async Task<ProductServiceResult<ProductResponse>> UpdateAsync(int id, ProductRequest request)
     {
         var validationResult = await _productRequestValidator.ValidateAsync(request);
         if (!validationResult.IsValid)
@@ -93,11 +97,18 @@ public class ProductService : IProductService
             return failResult;
         }
 
+        var isEmailConfirmed = await _userServiceClient.IsEmailConfirmedAsync(request.UserId);
+        if (!isEmailConfirmed)
+        {
+            return ProductServiceResult<ProductResponse>.Failure(
+                ["Email is not confirmed. Cannot update products."], ServiceErrorCode.Forbidden);
+        }
+        
         var existingProduct = await _productRepository.GetByIdAsync(id);
         if (existingProduct == null)
         {
             return ProductServiceResult<ProductResponse>.Failure(
-                new List<string> { "Product not found." },
+                ["Product not found."],
                 ServiceErrorCode.NotFound);
         }
 
@@ -108,24 +119,38 @@ public class ProductService : IProductService
             return failResult;
         }
         
-        var productToUpdate = _mapper.Map<ProductModel>(request);
-        productToUpdate.Id = id; 
         
-        await _productRepository.UpdateAsync(productToUpdate);
+        _mapper.Map(request, existingProduct); 
+        await _productRepository.UpdateAsync(existingProduct);
+
         
-        ProductResponse productResult = _mapper.Map<ProductResponse>(productToUpdate);
+        
+        ProductResponse productResult = _mapper.Map<ProductResponse>(existingProduct);
         var result = ProductServiceResult<ProductResponse>.Success(productResult);
         
         return result;
     }
 
-    public async Task<ProductServiceResult> DeleteAsync(int id)
+    public async Task<ProductServiceResult> DeleteAsync(int id, int userId)
     {
         var productFromRepo = await _productRepository.GetByIdAsync(id);
         if (productFromRepo == null)
         {
             var failResult = ProductServiceResult.Failure(["Product not found."], ServiceErrorCode.NotFound);
             return failResult;
+        }
+
+        if (productFromRepo.UserId != userId)
+        {
+            var failResult = ProductServiceResult.Failure(["forbidden user"], ServiceErrorCode.Forbidden);
+            return failResult;
+        }
+        
+        var isEmailConfirmed = await _userServiceClient.IsEmailConfirmedAsync(userId);
+        if (!isEmailConfirmed)
+        {
+            return ProductServiceResult.Failure(
+                ["Email is not confirmed. Cannot update products."], ServiceErrorCode.Forbidden);
         }
 
         await _productRepository.DeleteAsync(id);

@@ -42,6 +42,27 @@ public class UserService : IUserService
         _jwtTokenService = jwtTokenService;
     }
 
+    public async Task<UserServiceResult<IEnumerable<UserResponse>>> GetAllUsersAsync(int pageNumber = 1, int pageSize = 10)
+    {
+        var users = await _userRepository.GetAllAsync(pageNumber, pageSize);
+
+        var usersDto = _mapper.Map<IEnumerable<UserResponse>>(users);
+
+        return UserServiceResult<IEnumerable<UserResponse>>.Success(usersDto);
+    }
+    
+    public async Task<UserServiceResult<UserResponse>> GetByIdAsync(int id)
+    {
+        var userFromRepo = await _userRepository.GetByIdAsync(id);
+        if (userFromRepo == null)
+        {
+            return UserServiceResult<UserResponse>.Failure(["User not found"], ServiceErrorCode.NotFound);
+        }
+
+        var userResponse = _mapper.Map<UserResponse>(userFromRepo);
+        return UserServiceResult<UserResponse>.Success(userResponse);
+    }
+
     public async Task<UserServiceResult<UserResponse>> RegisterAsync(RegisterRequest request)
     {
         ValidationResult validationResult = await _registerRequestValidator.ValidateAsync(request);
@@ -88,27 +109,6 @@ public class UserService : IUserService
         UserModel addedUser = await _userRepository.AddAsync(userToAdd);
         UserResponse createdUser = _mapper.Map<UserResponse>(addedUser);
 
-        var emailVerificationToken = _emailTokenService.GenerateEmailConfirmationToken(createdUser.Id);
-
-        string _baseUrl = _configuration["AppSettings:BaseApiUrl"];
-        var confirmLink =
-            $"{_baseUrl}/api/auth/confirm-email?token={Uri.EscapeDataString(emailVerificationToken)}";
-
-        var emailBody = $@"
-<p>hello {addedUser.FirstName},</p>
-<p>Thanks for registration! Verify your mail, tap the link:</p>
-<p><a href='{confirmLink}'>verify mail</a></p>
-<p>Link will expose after 24hours</p>";
-
-        try
-        {
-            await _emailService.SendEmailAsync(addedUser.Email, "inno-shop email verification", emailBody);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"Failed to send verification email: {e.Message}");
-        }
-
         UserServiceResult<UserResponse> successResult = UserServiceResult<UserResponse>.Success(createdUser);
         return successResult;
     }
@@ -120,20 +120,30 @@ public class UserService : IUserService
         if (userFromRepo == null)
         {
             var failResult = UserServiceResult<LoginResponse>.Failure(["user with this username was not found"],
-                ServiceErrorCode.NotFound);
+                ServiceErrorCode.Unauthorized);
+            return failResult;
+        }
+
+        if (!userFromRepo.IsActive)
+        {
+            var failResult =
+                UserServiceResult<LoginResponse>.Failure(["Account is deactivated."], ServiceErrorCode.Forbidden);
             return failResult;
         }
 
         if (!_passwordHasher.Verify(request.Password, userFromRepo.PasswordHash))
         {
             return UserServiceResult<LoginResponse>.Failure(
-                new List<string> { "Invalid password" },
+                ["Invalid password"],
                 ServiceErrorCode.Unauthorized
             );
         }
 
         var accessToken = _jwtTokenService.GenerateAccessToken(userFromRepo);
         var refreshToken = _jwtTokenService.GenerateRefreshToken();
+
+        userFromRepo.RefreshToken = refreshToken;
+        userFromRepo.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
         await _userRepository.UpdateAsync(userFromRepo);
 
         var loginResponse = new LoginResponse(
@@ -154,13 +164,88 @@ public class UserService : IUserService
         var userFromRepo = await _userRepository.GetByIdAsync(userId);
         if (userFromRepo == null)
         {
-            var failResult = UserServiceResult.Failure(["user with this email was not found"], ServiceErrorCode.NotFound);
+            var failResult =
+                UserServiceResult.Failure(["user with this email was not found"], ServiceErrorCode.NotFound);
             return failResult;
         }
-        
+
         await _userRepository.SetEmailConfirmedAsync(userId, true);
         var result = UserServiceResult.Success();
-        
+
         return result;
     }
+
+    public async Task<UserServiceResult> SendConfirmationEmailAsync(int userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+            return UserServiceResult.Failure(["User not found"], ServiceErrorCode.NotFound);
+
+        if (user.EmailConfirmed)
+            return UserServiceResult.Failure(["Email is already confirmed"], ServiceErrorCode.Conflict);
+
+        var token = _emailTokenService.GenerateEmailConfirmationToken(user.Id);
+
+        string _baseUrl = _configuration["AppSettings:BaseApiUrl"];
+
+        var confirmLink = $"{_baseUrl}/api/auth/confirm-email?token={Uri.EscapeDataString(token)}";
+
+        var emailBody = $@"
+            <p>Hello {user.FirstName},</p>
+            <p>You requested an email confirmation.</p>
+            <p>Click here to verify: <a href='{confirmLink}'>Verify Email</a></p>";
+
+        try
+        {
+            await _emailService.SendEmailAsync(user.Email, "Confirm your email", emailBody);
+            return UserServiceResult.Success();
+        }
+        catch (Exception e)
+        {
+            // todo: logger
+            return UserServiceResult.Failure(["Failed to send email"], ServiceErrorCode.InternalServerError);
+        }
+    }
+
+    public async Task<UserServiceResult> ConfirmEmailAsync(string token)
+    {
+        int? userId = _emailTokenService.ValidateEmailConfirmationToken(token);
+
+        if (userId == null)
+        {
+            return UserServiceResult.Failure(["Invalid or expired email confirmation token."],
+                ServiceErrorCode.Validation);
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId.Value);
+
+        if (user == null)
+        {
+            return UserServiceResult.Failure(["User not found."], ServiceErrorCode.NotFound);
+        }
+
+        if (user.EmailConfirmed)
+        {
+            return UserServiceResult.Success();
+        }
+
+        await _userRepository.SetEmailConfirmedAsync(user.Id, true);
+
+        return UserServiceResult.Success();
+    }
+
+    public async Task<UserServiceResult> ChangeActiveStatusAsync(int userId, bool isActive)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+        {
+            return UserServiceResult.Failure(["User not found"], ServiceErrorCode.NotFound);
+        }
+
+        await _userRepository.UpdateStatusAsync(userId, isActive);
+    
+        return UserServiceResult.Success();
+    }
+
+
 }

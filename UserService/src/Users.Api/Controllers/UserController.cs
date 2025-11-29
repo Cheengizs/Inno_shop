@@ -22,7 +22,7 @@ public class UserController : ControllerBase
     public async Task<ActionResult<UserStatusDto>> GetUserStatus(int id)
     {
         var result = await _userService.GetByIdAsync(id);
-        
+
         if (!result.IsSuccess || result.Value is null) return NotFound();
 
         var statusDto = new UserStatusDto
@@ -34,13 +34,13 @@ public class UserController : ControllerBase
 
         return Ok(statusDto);
     }
-    
+
     [HttpPatch("{id:int}/activation")]
-    [Authorize(Roles = "Admin")] 
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> ToggleUserActivationAsync(int id, [FromBody] bool isActive)
     {
         var result = await _userService.ChangeActiveStatusAsync(id, isActive);
-        
+
         if (!result.IsSuccess)
         {
             return result.ErrorCode switch
@@ -49,14 +49,14 @@ public class UserController : ControllerBase
                 _ => StatusCode(500, result.Errors)
             };
         }
-        
+
         return Ok(new { userId = id, isActive = isActive, message = "User status updated." });
     }
-    
-    [HttpGet] 
-    [Authorize(Roles = "Admin")] 
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<IEnumerable<UserResponse>>> GetAllUsersAsync(
-        [FromQuery] int pageNumber = 1, 
+        [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10)
     {
         var result = await _userService.GetAllUsersAsync(pageNumber, pageSize);

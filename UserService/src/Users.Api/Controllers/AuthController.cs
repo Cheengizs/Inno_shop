@@ -47,7 +47,7 @@ public class AuthController : ControllerBase
             {
                 ServiceErrorCode.NotFound => Unauthorized(new { error = "Invalid credentials" }), 
                 ServiceErrorCode.Unauthorized => Unauthorized(result.Errors),
-                ServiceErrorCode.Forbidden => StatusCode(403, result.Errors), // Для бана
+                ServiceErrorCode.Forbidden => StatusCode(403, result.Errors),
                 _ => StatusCode(500, result.Errors)
             };
         }
@@ -97,5 +97,55 @@ public class AuthController : ControllerBase
         }
 
         return Ok(new { message = "Email confirmed successfully!" });
+    }
+    
+    [HttpPost("refresh-token")]
+    public async Task<ActionResult<LoginResponse>> RefreshTokenAsync([FromBody] RefreshTokenRequest request)
+    {
+        var result = await _userService.RefreshTokenAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ServiceErrorCode.Validation => BadRequest(result.Errors),
+                ServiceErrorCode.Unauthorized => Unauthorized(result.Errors), // 401 - пусть фронт выкидывает на логин
+                ServiceErrorCode.Forbidden => StatusCode(403, result.Errors),
+                _ => StatusCode(500, result.Errors)
+            };
+        }
+
+        return Ok(result.Value);
+    }
+    
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPasswordAsync([FromBody] ForgotPasswordRequest request)
+    {
+        var result = await _userService.ForgotPasswordAsync(request.Email);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(500, result.Errors);
+        }
+
+        return Ok(new { message = "If an account with that email exists, a reset link has been sent." });
+    }
+    
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPasswordAsync([FromBody] ResetPasswordRequest request)
+    {
+        var result = await _userService.ResetPasswordAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ServiceErrorCode.Validation => BadRequest(result.Errors), 
+                ServiceErrorCode.NotFound => BadRequest(result.Errors),   
+                _ => StatusCode(500, result.Errors)
+            };
+        }
+
+        return Ok(new { message = "Password has been reset successfully." });
     }
 }

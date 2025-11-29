@@ -8,6 +8,7 @@ public class ProductEntity
     public decimal Price { get; set; } = 0;
     public bool IsAvailable { get; set; } = true;
     public bool IsDeleted { get; set; } = false;
+    public bool IsUserActive { get; set; } = true;
     public int UserId { get; set; } = 0; 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

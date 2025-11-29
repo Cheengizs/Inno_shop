@@ -140,4 +140,11 @@ public class ProductController : ControllerBase
 
         return NoContent();
     }
+    
+    [HttpPatch("internal/user-status/{userId:int}")]
+    public async Task<IActionResult> UpdateUserStatusAsync(int userId, [FromBody] bool isActive)
+    {
+        await _productService.UpdateProductsStatusByUserAsync(userId, isActive);
+        return NoContent();
+    }
 }

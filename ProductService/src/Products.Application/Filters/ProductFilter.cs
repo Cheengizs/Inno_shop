@@ -7,4 +7,6 @@ public class ProductFilter
     public decimal? MinPrice { get; set; } = null;
     public decimal? MaxPrice { get; set; } = null;
     public bool? IsAvailable { get; set; } = null;
+    public bool? RemoveDeleted { get; set; } = null;
+    public bool? RemoveNonActiveUsers { get; set; } = null;
 }

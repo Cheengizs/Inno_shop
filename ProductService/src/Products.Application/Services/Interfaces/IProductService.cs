@@ -13,4 +13,5 @@ public interface IProductService
     Task<ProductServiceResult<ProductResponse>> UpdateAsync(int id, ProductRequest request);
     Task<ProductServiceResult> DeleteAsync(int id, int userId);
     Task<ProductServiceResult<IEnumerable<ProductResponse>>> GetByOwnerIdAsync(int ownerId);
+    Task UpdateProductsStatusByUserAsync(int userId, bool isUserActive);
 }

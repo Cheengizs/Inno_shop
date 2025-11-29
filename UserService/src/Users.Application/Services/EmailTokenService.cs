@@ -14,7 +14,9 @@ public class EmailTokenService : IEmailTokenService
     private const string Issuer = "InnoShop";
     private const string Audience = "InnoShop";
     private const string ClaimPurpose = "Purpose";
-    private const string PurposeValue = "EmailConfirmation";
+    
+    private const string PurposeEmailConfirmation = "EmailConfirmation";
+    private const string PurposePasswordReset = "PasswordReset";
 
     public EmailTokenService(IConfiguration configuration)
     {
@@ -23,23 +25,31 @@ public class EmailTokenService : IEmailTokenService
 
     public string GenerateEmailConfirmationToken(int userId)
     {
-        var keyString = _configuration["Jwt:EmailConfirmationKey"];
-        if (string.IsNullOrEmpty(keyString)) throw new ArgumentNullException("Jwt:EmailConfirmationKey is missing in config");
-        
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
+        return GenerateToken(userId, PurposeEmailConfirmation, TimeSpan.FromHours(24));
+    }
+
+    public string GeneratePasswordResetToken(int userId)
+    {
+        return GenerateToken(userId, PurposePasswordReset, TimeSpan.FromMinutes(15));
+    }
+
+    private string GenerateToken(int userId, string purpose, TimeSpan expiry)
+    {
+        var keyString = _configuration["Jwt:EmailConfirmationKey"]; 
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
         {
             new Claim("UserId", userId.ToString()),
-            new Claim(ClaimPurpose, PurposeValue) 
+            new Claim(ClaimPurpose, purpose) 
         };
 
         var token = new JwtSecurityToken(
             issuer: Issuer,
             audience: Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(24),
+            expires: DateTime.UtcNow.Add(expiry),
             signingCredentials: creds
         );
 
@@ -47,6 +57,16 @@ public class EmailTokenService : IEmailTokenService
     }
 
     public int? ValidateEmailConfirmationToken(string token)
+    {
+        return ValidateTokenInternal(token, PurposeEmailConfirmation);
+    }
+
+    public int? ValidatePasswordResetToken(string token)
+    {
+        return ValidateTokenInternal(token, PurposePasswordReset);
+    }
+
+    private int? ValidateTokenInternal(string token, string expectedPurpose)
     {
         var keyString = _configuration["Jwt:EmailConfirmationKey"];
         if (string.IsNullOrEmpty(keyString)) return null;
@@ -75,7 +95,7 @@ public class EmailTokenService : IEmailTokenService
             }
 
             var purposeClaim = principal.FindFirst(ClaimPurpose)?.Value;
-            if (purposeClaim != PurposeValue)
+            if (purposeClaim != expectedPurpose)
             {
                 return null; 
             }

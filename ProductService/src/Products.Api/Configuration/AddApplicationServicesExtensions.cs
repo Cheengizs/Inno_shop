@@ -1,5 +1,8 @@
-﻿using FluentValidation;
+﻿using System.Text;
+using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens; 
 using Products.Application.Clients;
 using Products.Application.Profiles;
 using Products.Application.RepositoryInterfaces;
@@ -23,7 +26,36 @@ public static class AddApplicationServicesExtensions
             options.UseSqlServer(configuration.GetConnectionString("DbConnection"), 
                 sql => sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(5), null));
         });
-        
+
+        var jwtSettings = configuration.GetSection("JwtSettings");
+        var secretKey = jwtSettings["SecretKey"];
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = false; 
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                
+                ValidIssuer = jwtSettings["Issuer"],
+                ValidAudience = jwtSettings["Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!)),
+                
+                ClockSkew = TimeSpan.Zero 
+            };
+        });
+
+        services.AddAuthorization();
+
         services.AddControllers();
         
         services.AddAutoMapper(cfg => { },
@@ -32,11 +64,10 @@ public static class AddApplicationServicesExtensions
 
         services.AddValidatorsFromAssemblyContaining<ProductValidator>();
 
-        services.AddScoped<IUserServiceClient, UserServiceClient>();
-        
         services.AddHttpClient<IUserServiceClient, UserServiceClient>(client =>
         {
-            client.BaseAddress = new Uri("http://localhost:5000/"); 
+            var userServiceUrl = configuration["ServiceUrls:UserService"] ?? "http://localhost:5000/";
+            client.BaseAddress = new Uri(userServiceUrl); 
         });
 
         services.AddScoped<IProductRepository, ProductRepository>();

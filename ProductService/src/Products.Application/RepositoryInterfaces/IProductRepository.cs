@@ -16,5 +16,7 @@ public interface IProductRepository
     Task<ProductModel> AddAsync(ProductModel product);
     Task UpdateAsync(ProductModel product);
     Task DeleteAsync(int id);
+    Task UpdateDeletionStatusAsync(int id, bool isDeleted);
     Task<IEnumerable<ProductModel>> GetByOwnerIdAsync(int ownerId);
+    Task UpdateUserActiveStatusAsync(int userId, bool isUserActive);
 }

@@ -13,5 +13,7 @@ public interface IUserService
     Task<UserServiceResult> SendConfirmationEmailAsync(int userId);
     Task<UserServiceResult> ConfirmEmailAsync(string token); 
     Task<UserServiceResult> ChangeActiveStatusAsync(int userId, bool isActive);
-    
+    Task<UserServiceResult<LoginResponse>> RefreshTokenAsync(RefreshTokenRequest request);
+    Task<UserServiceResult> ForgotPasswordAsync(string email);
+    Task<UserServiceResult> ResetPasswordAsync(ResetPasswordRequest request);
 }

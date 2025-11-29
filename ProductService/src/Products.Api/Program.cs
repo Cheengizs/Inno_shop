@@ -26,7 +26,7 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Microsoft.Data.SqlClient.SqlException ex)
     {
-        // logger logic
+        
     }
     catch (Exception ex)
     {
@@ -36,4 +36,8 @@ using (var scope = app.Services.CreateScope())
 }
 app.UseHttpsRedirection();
 app.MapControllers();
+
+app.UseAuthentication();
+app.UseAuthorization();  
+
 app.Run();

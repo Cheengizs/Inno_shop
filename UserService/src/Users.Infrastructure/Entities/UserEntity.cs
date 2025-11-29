@@ -14,6 +14,6 @@ public class UserEntity
     public bool IsActive { get; set; } = true;
     public bool EmailConfirmed { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime RefreshTokenExpiry { get; set; }
-    public string RefreshToken { get; set; } = null!;
+    public DateTime? RefreshTokenExpiry { get; set; }
+    public string? RefreshToken { get; set; } = null!;
 }

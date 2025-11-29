@@ -171,4 +171,9 @@ public class ProductService : IProductService
         var result = ProductServiceResult<IEnumerable<ProductResponse>>.Success(productsResult);
         return result;
     }
+    
+    public async Task UpdateProductsStatusByUserAsync(int userId, bool isUserActive)
+    {
+        await _productRepository.UpdateUserActiveStatusAsync(userId, isUserActive);
+    }
 }

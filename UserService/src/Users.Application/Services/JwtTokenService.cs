@@ -63,7 +63,7 @@ public class JwtTokenService : IJwtTokenService
     
     public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
     {
-        var secretKey = _configuration["JwtSettings:SecretKey"];
+        var secretKey = _configuration["Jwt:SecretKey"];
     
         var tokenValidationParameters = new TokenValidationParameters
         {

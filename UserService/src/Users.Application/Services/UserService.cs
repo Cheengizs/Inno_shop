@@ -321,7 +321,7 @@ public class UserService : IUserService
 
         var token = _emailTokenService.GeneratePasswordResetToken(user.Id);
 
-        string baseUrl = _configuration["AppSettings:BaseApiUrl"]; // Или Url фронтенда
+        string baseUrl = _configuration["AppSettings:BaseApiUrl"]; 
         var resetLink = $"{baseUrl}/reset-password?token={Uri.EscapeDataString(token)}";
 
         var emailBody = $@"

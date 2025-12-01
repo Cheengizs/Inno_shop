@@ -119,6 +119,7 @@ public class AuthController : ControllerBase
     }
     
     [HttpPost("forgot-password")]
+    [Authorize]
     public async Task<IActionResult> ForgotPasswordAsync([FromBody] ForgotPasswordRequest request)
     {
         var result = await _userService.ForgotPasswordAsync(request.Email);
@@ -128,10 +129,11 @@ public class AuthController : ControllerBase
             return StatusCode(500, result.Errors);
         }
 
-        return Ok(new { message = "If an account with that email exists, a reset link has been sent." });
+        return Ok(new { message = "A reset link has been sent." });
     }
     
     [HttpPost("reset-password")]
+    [Authorize]
     public async Task<IActionResult> ResetPasswordAsync([FromBody] ResetPasswordRequest request)
     {
         var result = await _userService.ResetPasswordAsync(request);
@@ -141,11 +143,18 @@ public class AuthController : ControllerBase
             return result.ErrorCode switch
             {
                 ServiceErrorCode.Validation => BadRequest(result.Errors), 
-                ServiceErrorCode.NotFound => BadRequest(result.Errors),   
+                ServiceErrorCode.NotFound => NotFound(result.Errors),   
                 _ => StatusCode(500, result.Errors)
             };
         }
 
         return Ok(new { message = "Password has been reset successfully." });
+    }
+
+    [HttpPost("check-authorize")]
+    [Authorize]
+    public async Task<IActionResult> CheckAuthorizedAsync()
+    {
+        return Ok("ti pidorasik");
     }
 }

@@ -11,7 +11,7 @@ using Products.Application.Services.Interfaces;
 namespace Products.Api.Controllers;
 
 [ApiController]
-[Route("/api/products")]
+[Route("api/products")] 
 public class ProductController : ControllerBase
 {
     private readonly IProductService _productService;
@@ -21,7 +21,7 @@ public class ProductController : ControllerBase
         _productService = productService;
     }
 
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:int}", Name = "GetProductById")]
     public async Task<ActionResult<ProductResponse>> GetProductByIdAsync(int id)
     {
         ProductServiceResult<ProductResponse> serviceResult = await _productService.GetByIdAsync(id);
@@ -41,10 +41,7 @@ public class ProductController : ControllerBase
     public async Task<ActionResult<List<ProductResponse>>> GetAllProductsAsync([FromQuery] ProductFilter? filter)
     {
         var serviceResult = await _productService.GetAllAsync(filter);
-
-        if (!serviceResult.IsSuccess)
-            return BadRequest(serviceResult.Errors);
-
+        if (!serviceResult.IsSuccess) return BadRequest(serviceResult.Errors);
         return Ok(serviceResult.Value);
     }
 
@@ -53,12 +50,8 @@ public class ProductController : ControllerBase
         [FromQuery] int pageSize = 10, [FromQuery] ProductFilter? filter = null)
     {
         var serviceResult = await _productService.GetPagedAsync(pageNumber, pageSize, filter);
-
-        if (!serviceResult.IsSuccess)
-            return BadRequest(serviceResult.Errors);
-
-        var result = serviceResult.Value;
-        return Ok(result);
+        if (!serviceResult.IsSuccess) return BadRequest(serviceResult.Errors);
+        return Ok(serviceResult.Value);
     }
 
     [HttpPost]
@@ -90,9 +83,9 @@ public class ProductController : ControllerBase
 
         ProductResponse product = result.Value;
 
-        return CreatedAtAction(nameof(GetProductByIdAsync), new { id = product.Id }, product);
+        return CreatedAtRoute("GetProductById", new { id = product.Id }, product);
     }
-
+    
     [HttpPut("{id:int}")]
     [Authorize]
     public async Task<IActionResult> UpdateProductAsync(int id, [FromBody] ProductCreateRequest request)

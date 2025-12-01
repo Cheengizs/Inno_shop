@@ -54,7 +54,6 @@ public class UserController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<IEnumerable<UserResponse>>> GetAllUsersAsync(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10)
@@ -68,4 +67,22 @@ public class UserController : ControllerBase
 
         return Ok(result.Value);
     }
+
+    [HttpPatch("change-active-status/{id:int}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult> ChangeActiveAsync(int id, [FromBody] bool isActive)
+    {
+        var result = await _userService.ChangeActiveStatusAsync(id, isActive);
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ServiceErrorCode.NotFound => NotFound(result.Errors),
+                _ => BadRequest(result.Errors)
+            };
+        }
+        
+        return Ok(new { userId = id, isActive = isActive, message = "User status updated." });
+    }
+    
 }

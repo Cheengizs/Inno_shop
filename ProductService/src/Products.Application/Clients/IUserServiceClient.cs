@@ -3,5 +3,5 @@
 public interface IUserServiceClient
 {
     Task<bool> ExistsAsync(int userId);
-    Task<bool> IsEmailConfirmedAsync(int userId); // <--- Добавляем это
+    Task<bool> IsEmailConfirmedAsync(int userId); 
 }

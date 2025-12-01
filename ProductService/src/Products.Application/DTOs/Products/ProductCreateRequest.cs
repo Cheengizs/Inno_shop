@@ -5,5 +5,4 @@ public record ProductCreateRequest(
     string Description,
     decimal Price,
     bool IsAvailable,
-    int UserId,
     DateTime CreatedAt);

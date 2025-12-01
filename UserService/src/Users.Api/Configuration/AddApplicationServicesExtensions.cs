@@ -94,7 +94,7 @@ public static class AddApplicationServicesExtensions
                             Id = "Bearer"
                         }
                     },
-                    new string[] {}
+                    []
                 }
             });
         });

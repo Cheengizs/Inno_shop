@@ -129,7 +129,7 @@ public class UserService : IUserService
 
         if (userFromRepo == null)
         {
-            var failResult = UserServiceResult<LoginResponse>.Failure(["user with this username was not found"],
+            var failResult = UserServiceResult<LoginResponse>.Failure(["Invalid user or password"],
                 ServiceErrorCode.Unauthorized);
             return failResult;
         }
@@ -144,7 +144,7 @@ public class UserService : IUserService
         if (!_passwordHasher.Verify(request.Password, userFromRepo.PasswordHash))
         {
             return UserServiceResult<LoginResponse>.Failure(
-                ["Invalid password"],
+                ["Invalid password or username"],
                 ServiceErrorCode.Unauthorized
             );
         }
@@ -246,7 +246,7 @@ public class UserService : IUserService
 
     public async Task<UserServiceResult> ChangeActiveStatusAsync(int id, bool isActive)
     {
-        var user = await _userRepository.GetByIdAsync(id);
+        var user = await _userRepository.GetByIdAsync(id, true);
         if (user == null)
         {
             return UserServiceResult.Failure(["User not found"], ServiceErrorCode.NotFound);

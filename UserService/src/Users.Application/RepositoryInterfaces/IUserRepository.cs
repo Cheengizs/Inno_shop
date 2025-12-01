@@ -4,7 +4,7 @@ namespace Users.Application.RepositoryInterfaces;
 
 public interface IUserRepository
 {
-    Task<UserModel?> GetByIdAsync(int id);               
+    Task<UserModel?> GetByIdAsync(int id, bool showNonActive = false);               
     Task<UserModel?> GetByUsernameAsync(string username); 
     Task<UserModel?> GetByEmailAsync(string email);      
     Task<IEnumerable<UserModel>> GetAllAsync(int pageNumber, int pageSize);    

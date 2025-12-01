@@ -18,9 +18,15 @@ public class UserRepository : IUserRepository
         _mapper = mapper;
     }
 
-    public async Task<UserModel?> GetByIdAsync(int id)
+    public async Task<UserModel?> GetByIdAsync(int id, bool showNonActive = false)
     {
-        var userFromDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == id && u.IsActive);
+
+        UserEntity? userFromDb;
+        if (showNonActive)
+            userFromDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+        else
+            userFromDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == id && u.IsActive);
+        
         UserModel? result = _mapper.Map<UserModel>(userFromDb);
         return result;
     }

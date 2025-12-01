@@ -119,7 +119,6 @@ public class AuthController : ControllerBase
     }
     
     [HttpPost("forgot-password")]
-    [Authorize]
     public async Task<IActionResult> ForgotPasswordAsync([FromBody] ForgotPasswordRequest request)
     {
         var result = await _userService.ForgotPasswordAsync(request.Email);
@@ -155,6 +154,20 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<IActionResult> CheckAuthorizedAsync()
     {
-        return Ok("ti pidorasik");
+        var userIdClaim = User.FindFirst("UserId") ?? User.FindFirst(ClaimTypes.NameIdentifier);
+        
+        if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+        {
+            return Unauthorized();
+        }
+        
+        var res = await _userService.GetByIdAsync(userId);
+
+        if (!res.IsSuccess || res.Value == null)
+        {
+            return BadRequest(res.Errors);
+        }
+        
+        return Ok($"ti pidorasik, {res.Value.Role}");
     }
 }

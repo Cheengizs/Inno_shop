@@ -7,7 +7,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplicationServices(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
@@ -34,10 +33,12 @@ using (var scope = app.Services.CreateScope())
         throw; 
     }
 }
-app.UseHttpsRedirection();
-app.MapControllers();
 
 app.UseAuthentication();
 app.UseAuthorization();  
+
+app.UseHttpsRedirection();
+app.MapControllers();
+
 
 app.Run();
